@@ -1,0 +1,205 @@
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+//structure for a Pokémon
+struct Pokemon {
+    int id,hp,level;
+    string stance;
+    Pokemon* right;
+    Pokemon* left;
+
+    Pokemon(int id, int hp, int level, string stance) {
+        this->id = id;
+        this->hp = hp;
+        this->level = level;
+        this->stance = stance;
+        right = nullptr;
+        left = nullptr;
+    }
+};
+
+class CircularLinkedList {
+private:
+    Pokemon* currentTarget;
+    Pokemon* head;
+
+public:
+    CircularLinkedList() {
+        head = nullptr;
+        currentTarget = nullptr;
+    }
+
+    void insertPokemon(int id, int hp, int level, string stance);
+
+    void deletePokemon();   //right to be the next currenttarget
+
+    void shufflePokemon(char direction, int count);
+
+    void checkPokemon(int count);
+
+    void reversePokemon(int count);
+
+    void showResults();
+
+    void moveout();
+};
+
+void CircularLinkedList::insertPokemon(int id, int hp, int level, string stance){
+    Pokemon* newPokemon = new Pokemon(id, hp, level, stance);
+    if (!head) {
+        newPokemon->stance = "Neutral";
+        head = newPokemon;
+        currentTarget = head;
+        head->right = head;
+        head->left = head;
+    } else if (stance == "Neutral"){
+
+        newPokemon->right = currentTarget;
+        newPokemon->left = currentTarget->left;
+        currentTarget->left->right = newPokemon;
+        currentTarget->left = newPokemon;
+
+    } else if(stance == "Evolve"){
+
+    } else if(stance == "Attack"){
+
+    }
+}
+
+
+
+void CircularLinkedList::deletePokemon(){
+    if (head == nullptr)
+        return;
+
+    Pokemon* temp = currentTarget;
+
+    if(temp->right){
+        currentTarget->left->right = temp->right;
+        currentTarget->right->left = temp->left;
+        delete currentTarget;
+    }else{
+        delete currentTarget;
+    }
+}
+
+void CircularLinkedList::shufflePokemon(char direction, int count){
+    if (head == nullptr || count <= 0)
+        return;
+
+    for (int i = 0; i < count; i++) {
+        if (direction == 'c')
+            currentTarget = currentTarget->next;
+        else if (direction == 'a') {
+            Pokemon* temp = currentTarget;
+            while (temp->next != currentTarget)
+                temp = temp->next;
+            currentTarget = temp;
+        }
+    }
+}
+
+
+
+void CircularLinkedList::checkPokemon(int count){
+        if (head == nullptr || count <= 1)
+            return;
+
+        Pokemon* temp = currentTarget;
+        for (int i = 0; i < count - 1; i++) {
+            if (temp->id == temp->next->id) {
+                Pokemon* toDelete = temp->next;
+                temp->next = temp->next->next;
+                delete toDelete;
+            } else {
+                temp = temp->next;
+            }
+        }
+
+        if (currentTarget->next == nullptr)
+            currentTarget = head;
+}
+
+void CircularLinkedList::reversePokemon(int count){
+    if (head == nullptr || count <= 1)
+        return;
+
+    Pokemon* group[count];
+    Pokemon* temp = currentTarget;
+    for (int i = 0; i < count; i++) {
+        group[i] = temp;
+        temp = temp->next;
+    }
+
+    for (int i = 0; i < count; i++) {
+        int left = i;
+        int right = count - 1 - i;
+        if (left < right) {
+            swap(group[left], group[right]);
+        }
+    }
+
+    currentTarget = group[count - 1];
+    for (int i = 0; i < count - 1; i++) {
+        group[i]->next = group[i + 1];
+    }
+    group[count - 1]->next = currentTarget;
+}
+
+void CircularLinkedList::showResults(){
+    if (head == nullptr) {
+        cout << "noPokePoke;-;\n";
+        return;
+    }
+
+    Pokemon* temp = currentTarget;
+    do {
+        cout << "ID: " << temp->id << " HP: " << temp->hp << " LVL: " << temp->level << '\n';
+        temp = temp->next;
+    } while (temp != currentTarget);
+}
+
+
+int main() {
+    int n;
+    cin >> n;
+
+    CircularLinkedList cll;
+
+    string op; // operation
+    string stance; // insert stance
+
+    int int1, int2, int3; // insert values
+    char shu; // clockwise / anti-clockwise, int1 used for shuffle, check, and reverse
+
+    while (n--) {
+        cin >> op;
+        switch (op[0]) {
+            case 'I':
+                cin >> int1 >> int2 >> int3 >> stance;
+                cll.insertPokemon(int1, int2, int3, stance);
+                break;
+            case 'D':
+                cll.deletePokemon();
+                break;
+            case 'S':
+                cin >> shu >> int1;
+                cll.shufflePokemon(shu, int1);
+                break;
+            case 'C':
+                cin >> int1;
+                cll.checkPokemon(int1);
+                break;
+            case 'R':
+                cin >> int1;
+                cll.reversePokemon(int1);
+                break;
+        }
+    }
+
+    cll.showResults(); //result
+
+    return 0;
+}
