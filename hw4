@@ -1,0 +1,258 @@
+#include <iostream>
+#include <vector>
+#define INF 1e9
+using namespace std;
+
+// The edge between nodes.
+struct edge_node {
+    int dis = INF;
+    int traffic = 0;
+    edge_node(int dis, int traffic) {
+        this->dis = dis;
+        this->traffic = traffic;
+    }
+    edge_node() {}
+    // You can use default constructor when there's no edges between vertices
+    // since an edge with dis=INF and traffic=0 will never be selected.
+
+    // You can remove the int in pair<int, edge_node>
+    // by comparing edge_node with the default value.
+};
+
+struct order_information {
+    int id = -1;
+    string state = "idle"; // 4 states: idle, store, wait, home
+    int traffic_space = 0;
+    int driver_start = -1; // where driver starts
+    int store = -1; // the store's id
+    int home = -1; // the destination's id
+    int dist = 0; // the distance the delivery ma
+    vector<int> path;
+    order_information(int id, int source, int traffic_space) {
+        this->id = id;
+        this->store = source;
+        this->traffic_space = traffic_space;
+    }
+    order_information() {}
+};
+
+int v; // total vertices number, v <= 100
+vector<vector<edge_node>> arr(101, vector<edge_node>(101)); // edges' data
+vector<int> driver(101); // vertex's id -> the number of delivery men on the vertex
+vector<order_information> order_list(101); // order's id -> the order
+vector<int> parent(101); // vertex's id -> vertex's parent's id
+                         // Set to -1 if the vertex is the starting vertex in Dijkstra.
+vector<int> updated_timestamp(101); // vertex's id -> timestamp when the vertex is updated in Dijkstra.
+
+
+
+void add_vertex(int s, int d, int dis, int t) {
+    edge_node temp = edge_node(dis, t);
+    arr[s][d] = arr[d][s] = temp;
+    return;
+}
+
+vector<int> dijkstra(int source, int traffic) {
+    parent = vector<int>(101, source);
+    updated_timestamp = vector<int>(101, INF);
+
+    vector<int> shortest_distance(v + 1, INF);
+    vector<bool> added(v + 1, false);
+    int timestamp = 1;
+
+    for (int i = 1; i <= v; i++) {
+        if (arr[source][i].traffic >= traffic) {
+            shortest_distance[i] = arr[source][i].dis;
+            updated_timestamp[i] = timestamp++;
+        }
+    }
+    shortest_distance[source] = 0;
+    parent[source] = -1;
+    updated_timestamp[source] = 0;
+    added[source] = true;
+
+    // print_vector(shortest_distance);
+
+    for (int i = 1; i < v; i++) {
+        int shortest_vertex = -1;
+        int shortest_dist = INF;
+        for (int j = 1; j <= v; j++) {
+            if (!added[j] && shortest_distance[j] < shortest_dist) {
+                shortest_vertex = j;
+                shortest_dist = shortest_distance[j];
+            } else if (!added[j] && shortest_distance[j] == shortest_dist && updated_timestamp[j] < updated_timestamp[shortest_vertex]) {
+                shortest_vertex = j;
+                shortest_dist = shortest_distance[j];
+            }
+        }
+
+        if (shortest_vertex == -1) {
+            return shortest_distance;
+        }
+
+        added[shortest_vertex] = true;
+        for (int j = 1; j <= v; j++) {
+            if (added[j]) {
+                continue;
+            } else if (arr[shortest_vertex][j].traffic < traffic) {
+                continue;
+            }
+
+            int new_distance = arr[shortest_vertex][j].dis;
+            if (new_distance + shortest_dist < shortest_distance[j]) {
+                parent[j] = shortest_vertex;
+                shortest_distance[j] = new_distance + shortest_dist;
+                updated_timestamp[j] = timestamp++;
+            }
+        }
+    }
+    return shortest_distance;
+}
+
+bool check_traffic_space(int dst, int traffic) {
+    while (parent[dst] != -1) {
+        if (arr[dst][parent[dst]].traffic < traffic) {
+            return false;
+        } else {
+            dst = parent[dst];
+        }
+    }
+    return true;
+}
+
+void reduce_traffic_space(vector<int> path, int traffic_space) {
+    for (int i = 0; i < path.size() - 1; i++) {
+        arr[path[i]][path[i + 1]].traffic -= traffic_space;
+        arr[path[i + 1]][path[i]].traffic -= traffic_space;
+    }
+    return;
+}
+
+void return_traffic_space(vector<int> path, int traffic_space) {
+    for (int i = 0; i < path.size() - 1; i++) {
+        arr[path[i]][path[i + 1]].traffic += traffic_space;
+        arr[path[i + 1]][path[i]].traffic += traffic_space;
+    }
+    return;
+}
+
+vector<int> build_path(int dst) {
+    vector<int> ret;
+    while (parent[dst] != -1) {
+        ret.emplace_back(dst);
+        dst = parent[dst];
+    }
+    ret.emplace_back(dst);
+    return ret;
+}
+
+void order(int id, int source, int traffic) {
+    vector<int> dist = dijkstra(source, traffic);
+    
+    int shortest_vertex = -1;
+    int shortest_dist = INF;
+    for (int i = 1; i <= v; i++) {
+        if (dist[i] < shortest_dist && driver[i] > 0 && check_traffic_space(i, traffic)) {
+            shortest_vertex = i;
+            shortest_dist = dist[i];
+        } else if (dist[i] == shortest_dist && updated_timestamp[i] < updated_timestamp[shortest_vertex] && driver[i] > 0 && check_traffic_space(i, traffic)) {
+            shortest_vertex = i;
+            shortest_dist = dist[i];
+        }
+    }
+
+    if (shortest_vertex != -1) {
+        cout << "Order " << id << " from: " << shortest_vertex << endl;
+        driver[shortest_vertex]--;
+        order_list[id].driver_start = shortest_vertex;
+        order_list[id].path = build_path(shortest_vertex);
+        order_list[id].dist = dist[shortest_vertex];
+        order_list[id].state = "store";
+        reduce_traffic_space(order_list[id].path, order_list[id].traffic_space);
+    } else {
+        cout << "Just walk. T-T" << endl;
+    }
+
+    return;
+}
+
+void drop(int id, int dst) {
+    return_traffic_space(order_list[id].path, order_list[id].traffic_space);
+    order_list[id].home = dst;
+    vector<int> dist = dijkstra(order_list[id].store, order_list[id].traffic_space);
+
+    if (check_traffic_space(dst, order_list[id].traffic_space)) {
+        order_list[id].path = build_path(dst);
+        order_list[id].dist += dist[dst];
+        order_list[id].state = "home";
+        reduce_traffic_space(order_list[id].path, order_list[id].traffic_space);
+        cout << "Order " << id << " distance: " << order_list[id].dist << endl;
+    } else {
+        order_list[id].state = "wait";
+        cout << "No Way Home" << endl;
+    }
+
+    return;
+}
+
+void complete(int id) {
+    return_traffic_space(order_list[id].path, order_list[id].traffic_space);
+    driver[order_list[id].home]++;
+    order_list[id].state = "idle";
+
+    for (int i = 1; i < order_list.size(); i++) {
+        if (order_list[i].state == "wait") {
+            drop(i, order_list[i].home);
+            break;
+        }
+    }
+    
+    return;
+}
+
+int main(void) {
+    int e, d, c; // total vertices, total edges, total vertices with delivery men, total command
+    string op; // the operation
+
+    cin >> v >> e >> d;
+
+    // set driver
+    for (int i = 0; i < d; i++) {
+        int V, C;
+        cin >> op >> V >> C;
+        driver[V] = C;
+    }
+
+    // set arr
+    for (int i = 0; i < e; i++) {
+        int s, d, dis, t;
+        cin >> op >> s >> d >> dis >> t;
+        add_vertex(s, d, dis, t);
+    }
+    for (int i = 1; i <= v; i++) {
+        add_vertex(i, i, 0, INF);
+    }
+
+    // print_arr();
+
+    cin >> c;
+    for (int i = 0; i < c; i++) {
+        cin >> op;
+        if (op == "Order") {
+            int id, src, ts;
+            cin >> id >> src >> ts;
+            order_list[id] = order_information(id, src, ts);
+            order(id, src, ts);
+        } else if (op == "Drop") {
+            int id, dst;
+            cin >> id >> dst;
+            drop(id, dst);
+        } else if (op == "Complete") {
+            int id;
+            cin >> id;
+            complete(id);
+        }
+    }
+
+    return 0;
+}
