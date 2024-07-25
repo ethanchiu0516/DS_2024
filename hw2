@@ -5,15 +5,16 @@ using namespace std;
 
 //structure for a Pokémon
 struct Pokemon {
-    int id,hp,level;
+    int id,hp,level,attack;
     string stance;
     Pokemon* right;
     Pokemon* left;
 
-    Pokemon(int id, int hp, int level, string stance) {
+    Pokemon(int id, int attack, int hp, string stance) {
         this->id = id;
         this->hp = hp;
-        this->level = level;
+        this->level = 1;
+        this->attack = attack;
         this->stance = stance;
         right = nullptr;
         left = nullptr;
@@ -23,15 +24,16 @@ struct Pokemon {
 class CircularLinkedList {
 private:
     Pokemon* currentTarget;
-    Pokemon* head;
+    //Pokemon* head;
 
 public:
     CircularLinkedList() {
-        head = nullptr;
+        //head = nullptr;
         currentTarget = nullptr;
+        pokecnt = 0;
     }
 
-    void insertPokemon(int id, int hp, int level, string stance);
+    void insertPokemon(int id, int attack, int hp, string stance);
 
     void deletePokemon();   //right to be the next currenttarget
 
@@ -43,53 +45,208 @@ public:
 
     void showResults();
 
-    void moveout();
+    //void moveout();
+
+    int pokecnt;
 };
 
-void CircularLinkedList::insertPokemon(int id, int hp, int level, string stance){
-    Pokemon* newPokemon = new Pokemon(id, hp, level, stance);
-    if (!head) {
+void CircularLinkedList::insertPokemon(int id, int attack, int hp, string stance){
+    Pokemon* newPokemon = new Pokemon(id, attack, hp, stance);
+    if (!currentTarget) {
         newPokemon->stance = "Neutral";
-        head = newPokemon;
-        currentTarget = head;
-        head->right = head;
-        head->left = head;
+        currentTarget = newPokemon;
+        //currentTarget = head;
+        currentTarget->right = currentTarget;
+        currentTarget->left = currentTarget;
+        pokecnt++;
     } else if (stance == "Neutral"){
 
         newPokemon->right = currentTarget;
         newPokemon->left = currentTarget->left;
         currentTarget->left->right = newPokemon;
         currentTarget->left = newPokemon;
+        pokecnt++;
 
     } else if(stance == "Evolve"){
 
-    } else if(stance == "Attack"){
+        if(currentTarget->left->id == newPokemon->id && currentTarget->id == newPokemon->id && currentTarget->left->level!=3 && currentTarget->level != 3 && pokecnt >= 2){
+            pokecnt--;
+            Pokemon* newPP = new Pokemon(id, attack, hp, "Neutral");
+            if(currentTarget->level == 2) newPP->level = 3;
+            else if(currentTarget->left->level == 2) newPP->level = 3;
+            else newPP->level = 2;
 
+            if(currentTarget->attack > newPP->attack) newPP->attack = currentTarget->attack;
+            else if(currentTarget->left->attack > newPP->attack) newPP->attack = currentTarget->left->attack;
+
+            if(currentTarget->hp > newPP->hp) newPP->hp = currentTarget->hp;
+            else if(currentTarget->left->hp > newPP->hp) newPP->hp = currentTarget->left->hp;
+
+            newPP->right = currentTarget->right;
+            newPP->left = currentTarget->left->left;
+            currentTarget->right->left = newPP;
+            currentTarget->left->left->right = newPP;
+            //delete currentTarget->left;
+            //delete currentTarget;
+            currentTarget = newPP;
+
+            if(pokecnt == 1){
+                currentTarget = newPP;
+                currentTarget->right = currentTarget;
+                currentTarget->left = currentTarget;
+            }
+
+
+//evolve have problem:consider only 2 pokemon
+        }else{
+            newPokemon->stance = "Neutral";
+            newPokemon->right = currentTarget;
+            newPokemon->left = currentTarget->left;
+            currentTarget->left->right = newPokemon;
+            currentTarget->left = newPokemon;
+            pokecnt++;
+        }
+
+    } else if(stance == "Attack"){
+        if(pokecnt == 0){
+            newPokemon->stance = "Neutral";
+            currentTarget = newPokemon;
+            currentTarget->right = currentTarget;
+            currentTarget->left = currentTarget;
+            pokecnt++;
+            return;
+        }
+        if(pokecnt == 1){
+            if(currentTarget->hp-newPokemon->attack <= 0){
+                newPokemon->stance = "Neutral";
+                currentTarget = newPokemon;
+                currentTarget->right = currentTarget;
+                currentTarget->left = currentTarget;
+                return;
+
+            }else{
+                newPokemon->stance = "Neutral";
+                newPokemon->left = currentTarget->left;
+                newPokemon->right = currentTarget;
+                currentTarget->hp = currentTarget->hp - newPokemon->attack;
+                currentTarget->left->right = newPokemon;
+                currentTarget->left = newPokemon;
+                pokecnt++;
+                return;
+            }
+        }else{
+            /*
+            pokecnt++;
+            if(currentTarget->left->hp - newPokemon->attack <= 0){
+                newPokemon->stance = "Neutral";
+                newPokemon->left = currentTarget->left->left;
+                currentTarget->left->left->right = newPokemon;
+                delete currentTarget->left;
+                pokecnt--;
+            }else{
+                newPokemon->stance = "Neutral";
+                newPokemon->left = currentTarget->left;
+                currentTarget->left->right = newPokemon;
+                currentTarget->left->left->hp = currentTarget->left->hp - newPokemon->attack;
+            }
+            if(currentTarget->hp - newPokemon->attack <= 0){
+                newPokemon->stance = "Neutral";
+                newPokemon->right = currentTarget->right->right;
+                currentTarget->right->left = newPokemon;
+                currentTarget = newPokemon;
+                pokecnt--;
+            }else{
+                newPokemon->stance = "Neutral";
+                newPokemon->right = currentTarget;
+                currentTarget->left = newPokemon;
+                currentTarget->hp = currentTarget->hp - newPokemon->attack;
+            }*/
+
+            if(currentTarget->hp - newPokemon->attack <= 0 && currentTarget->left->hp - newPokemon->attack <= 0) pokecnt--;
+            else if(currentTarget->hp - newPokemon->attack > 0 && currentTarget->left->hp - newPokemon->attack > 0) pokecnt++;
+
+            if(pokecnt == 1){
+                //cout<<"'1'"<<endl;
+                newPokemon->stance = "Neutral";
+                currentTarget = newPokemon;
+                currentTarget->right = currentTarget;
+                currentTarget->left = currentTarget;
+            }else if(currentTarget->hp - newPokemon->attack <= 0 && currentTarget->left->hp - newPokemon->attack <= 0){
+                //cout<<"'2'"<<endl;
+                newPokemon->stance = "Neutral";
+                newPokemon->left = currentTarget->left->left;
+                newPokemon->right = currentTarget->right;
+                currentTarget->right->left = newPokemon;
+                currentTarget->left->left->right = newPokemon;
+                currentTarget = currentTarget->right->left;
+            }else if(currentTarget->hp - newPokemon->attack <= 0 && currentTarget->left->hp - newPokemon->attack > 0){
+                //cout<<"'3'"<<endl;
+                newPokemon->stance = "Neutral";
+                newPokemon->left = currentTarget->left;
+                newPokemon->right = currentTarget->right;
+                currentTarget->left->hp = currentTarget->left->hp - newPokemon->attack;
+                currentTarget->left->right = newPokemon;
+                currentTarget->right->left = newPokemon;
+                currentTarget = currentTarget->right->left;
+            }else if(currentTarget->hp - newPokemon->attack > 0 && currentTarget->left->hp - newPokemon->attack <= 0){
+                //cout<<"'4'"<<endl;
+                newPokemon->stance = "Neutral";
+                currentTarget->hp = currentTarget->hp - newPokemon->attack;
+                newPokemon->left = currentTarget->left->left;
+                newPokemon->right = currentTarget;
+                currentTarget->left->left->right = newPokemon;
+                currentTarget->left = newPokemon;
+            }else{
+                //cout<<"'5'"<<endl;
+                newPokemon->stance = "Neutral";
+                newPokemon->right = currentTarget;
+                newPokemon->left = currentTarget->left;
+                currentTarget->left->right = newPokemon;
+                currentTarget->left = newPokemon;
+                currentTarget->hp = currentTarget->hp - newPokemon->attack;
+                currentTarget->left->left->hp = currentTarget->left->left->hp - newPokemon->attack;
+            }
+        }
     }
 }
 
 
 
 void CircularLinkedList::deletePokemon(){
-    if (head == nullptr)
+    if (currentTarget == nullptr)
         return;
 
     Pokemon* temp = currentTarget;
-
-    if(temp->right){
-        currentTarget->left->right = temp->right;
-        currentTarget->right->left = temp->left;
+    if(pokecnt == 1){
+        currentTarget = nullptr;
+        pokecnt = 0;
+        return;
+    }
+    else{
+        currentTarget->left->right = currentTarget->right;
+        currentTarget->right->left = currentTarget->left;
+        Pokemon* tmp = currentTarget->right;
         delete currentTarget;
-    }else{
-        delete currentTarget;
+        currentTarget = tmp;
+        pokecnt--;
     }
 }
 
 void CircularLinkedList::shufflePokemon(char direction, int count){
-    if (head == nullptr || count <= 0)
-        return;
+    if (currentTarget == nullptr) return;
 
-    for (int i = 0; i < count; i++) {
+    if (pokecnt == 1) return;
+    //cout<<pokecnt<<endl;
+    int cnt = count % pokecnt;
+
+    if(cnt == 0) return;
+
+    int cur_id = currentTarget->id;
+    int cur_hp = currentTarget->hp;
+    int cur_attack = currentTarget->attack;
+    int cur_level = currentTarget->level;
+    /*
+    for (int i = 0; i < cnt; i++) {
         if (direction == 'c')
             currentTarget = currentTarget->next;
         else if (direction == 'a') {
@@ -99,66 +256,383 @@ void CircularLinkedList::shufflePokemon(char direction, int count){
             currentTarget = temp;
         }
     }
-}
+    */
+    //same node, change position
+    Pokemon* tmp = currentTarget;
+    if(direction == 'c'){
 
+        for(int i=0; i<cnt; i++){
+            //cout<<i<<endl;
+            tmp = tmp->right;
+        }
+
+    }else if(direction == 'a'){
+
+        for(int i=0; i<cnt; i++){
+            tmp = tmp->left;
+        }
+    }
+    int new_id = tmp->id;
+    int new_hp = tmp->hp;
+    int new_attack = tmp->attack;
+    int new_level = tmp->level;
+
+    currentTarget->id = new_id;
+    currentTarget->hp = new_hp;
+    currentTarget->attack = new_attack;
+    currentTarget->level = new_level;
+
+
+    if(direction == 'c'){
+
+        for(int i=0; i<cnt; i++){
+            //cout<<i<<endl;
+            //cout<<currentTarget->id<<endl;;
+            currentTarget = currentTarget->right;
+        }
+
+    }else if(direction == 'a'){
+
+        for(int i=0; i<cnt; i++){
+            currentTarget = currentTarget->left;
+        }
+    }
+
+    currentTarget->id = cur_id;
+    currentTarget->hp = cur_hp;
+    currentTarget->attack = cur_attack;
+    currentTarget->level = cur_level;
+}
 
 
 void CircularLinkedList::checkPokemon(int count){
-        if (head == nullptr || count <= 1)
-            return;
 
-        Pokemon* temp = currentTarget;
-        for (int i = 0; i < count - 1; i++) {
-            if (temp->id == temp->next->id) {
-                Pokemon* toDelete = temp->next;
-                temp->next = temp->next->next;
-                delete toDelete;
-            } else {
-                temp = temp->next;
-            }
+    if(currentTarget == nullptr || count == 1) return;
+
+    int cnt[101] = {};
+    cnt[currentTarget->id]++;
+
+    Pokemon* now = currentTarget;
+    Pokemon* new_target = nullptr;
+
+    for(int i=0; i<count-1; i++){
+        now = now->right;
+        cnt[now->id]++;
+    }
+    bool first = false;
+    now = currentTarget;
+    int rev = 0;
+    for(int i=0; i<count; i++){
+        if(cnt[now->id]>1){
+            currentTarget = now;
+            Pokemon* tmp = currentTarget;
+            currentTarget->left->right = currentTarget->right;
+            currentTarget->right->left = currentTarget->left;
+            currentTarget = currentTarget->right;
+            delete tmp;
+            now = currentTarget;
+            rev++;
+            if(i == 0)first = true;
+        }else{
+            if(new_target == nullptr) new_target = now;
+            now = now->right;
+        }
+    }
+    //cout<<"count: "<<count<<endl;
+    //cout<<"rev: "<<rev<<endl;
+    pokecnt = pokecnt - rev;
+    if(pokecnt == 0){
+        currentTarget = nullptr;
+        return;
+    }
+    if(new_target!=nullptr) currentTarget = new_target;
+    else return;
+    return;
+
+    /*
+    Pokemon* current = currentTarget;
+    Pokemon* ptr;
+    int cnt = count;
+    int cnt2 = cnt;
+    int rev = 0;
+    bool seen[1005] = {false};
+
+    do{
+        cout<<"do"<<endl;
+        seen[current->id] = true;
+
+        Pokemon* temp = current->right;
+
+        if(seen[temp->id]){
+            rev++;
+            cout<<"remove"<<endl;
+            current->left->right = current->right;
+            current->right->left = current->left;
+            delete current;
         }
 
-        if (currentTarget->next == nullptr)
-            currentTarget = head;
+        current = temp;
+
+    }while(cnt2--);
+    rev = cnt2-rev;
+    cout<<"out 1"<<endl;
+
+    while(rev--)current = current->left;
+    currentTarget = current;
+    */
+    /*
+    while(current != currentTarget->left)current = current->left;
+    currentTarget = current->right;
+    */
+/*
+    bool seen[1000] = {false};
+    Pokemon* prev = nullptr;
+    Pokemon* tmp = currentTarget;
+    Pokemon* end_ = currentTarget;
+    Pokemon* head = currentTarget->left;
+    tmp->left = head;
+    head->right = tmp;
+    int cnt = count;
+    int cnt2 = count;
+    int cnt3 = count;
+    int remov = 0;
+    cnt = cnt;
+    tmp = tmp->right;
+    while(cnt2--)end_ = end_->right;
+    while(tmp!=end_){
+        if(seen[tmp->id]){
+            prev->right = tmp->right;
+            prev->left = tmp->left;
+            delete tmp;
+            tmp = prev->right;
+            remov++;
+        }else{
+            seen[tmp->id] = true;
+            prev = tmp;
+            tmp = tmp->right;
+        }
+        end_ = end_->right;
+    }
+    cout<<remov<<endl;
+    tmp->left = currentTarget->left;
+    currentTarget->left->right = tmp;
+    currentTarget = tmp;
+
+    tmp->right = end_;
+    end_->left = tmp;
+
+    while(tmp->left!=head){
+        tmp = tmp->left;
+        cout<<"in"<<endl;
+    }
+    currentTarget = tmp;
+*/
+//clockwise:->left
+/*
+    while(cnt2--) tmp = tmp->left;
+    tmp->left = currentTarget->left;
+    currentTarget->left->right = tmp;
+    while(cnt3--) {
+        currentTarget = currentTarget->right;
+        tmp = tmp->right;
+    }
+    */
+
+
 }
 
+
+
+
 void CircularLinkedList::reversePokemon(int count){
-    if (head == nullptr || count <= 1)
+/*
+    int cur_id = 0;
+    int cur_hp = 0;
+    int cur_attack = 0;
+    int cur_level = 0;
+    int new_id = 0;
+    int new_hp = 0;
+    int new_attack = 0;
+    int new_level = 0;
+    */
+/*
+    if(pokecnt == 2){
+
+        cur_id = currentTarget->id;
+        cur_hp = currentTarget->hp;
+        cur_attack = currentTarget->attack;
+        cur_level = currentTarget->level;
+
+        new_id = currentTarget->left->id;
+        new_hp = currentTarget->left->hp;
+        new_attack = currentTarget->left->attack;
+        new_level = currentTarget->left->level;
+
+        currentTarget->id = new_id;
+        currentTarget->hp = new_hp;
+        currentTarget->attack = new_attack;
+        currentTarget->level = new_level;
+
+        currentTarget = currentTarget->left;
+
+        currentTarget->id = cur_id;
+        currentTarget->hp = cur_hp;
+        currentTarget->attack = cur_attack;
+        currentTarget->level = cur_level;
+
+        currentTarget = currentTarget->right;
         return;
-
-    Pokemon* group[count];
-    Pokemon* temp = currentTarget;
-    for (int i = 0; i < count; i++) {
-        group[i] = temp;
-        temp = temp->next;
     }
+    */
 
-    for (int i = 0; i < count; i++) {
-        int left = i;
-        int right = count - 1 - i;
-        if (left < right) {
-            swap(group[left], group[right]);
+    if(count<pokecnt){
+        int round = pokecnt/count;
+        int mode = pokecnt%count;
+        int rou = round;
+        //Pokemon arr[count];
+
+        int id[count];
+        int hp[count];
+        int attack[count];
+        int level[count];
+
+        Pokemon* temp = currentTarget;
+        Pokemon* small = temp;
+        while(rou--){
+
+            for(int i=0; i<count; i++){
+                attack[i] = temp->attack;
+                id[i] = temp->id;
+                level[i] = temp->level;
+                hp[i] = temp->hp;
+
+                temp = temp->right;
+            }
+            for(int i=0; i<count; i++){
+                small->attack = attack[count-1-i];
+                small->hp = hp[count-1-i];
+                small->id = id[count-1-i];
+                small->level = level[count-1-i];
+                small = small->right;
+            }
         }
+        for(int i=0; i<mode; i++){
+            attack[i] = temp->attack;
+            id[i] = temp->id;
+            level[i] = temp->level;
+            hp[i] = temp->hp;
+            temp = temp->right;
+        }
+        for(int i=0; i<mode; i++){
+            small->attack = attack[mode-1-i];
+            small->hp = hp[mode-1-i];
+            small->id = id[mode-1-i];
+            small->level = level[mode-1-i];
+            small = small->right;
+        }
+        currentTarget = small;
+
+
+
+        /*
+        while(round--){
+            Pokemon* temp = currentTarget;
+            int head_id = temp->id;
+            int head_hp = temp->hp;
+            int head_attack = temp->attack;
+            int head_level = temp->level;
+
+            int mod = mode-1;
+            while(mod--){
+
+            }
+        }
+        */
+    }else{
+        /*
+        Pokemon* temp = currentTarget;
+        int peko = pokecnt-1;
+        while(peko--){
+            temp = currentTarget->left;
+            cur_id = currentTarget->id;
+            cur_hp = currentTarget->hp;
+            cur_attack = currentTarget->attack;
+            cur_level = currentTarget->level;
+
+            new_id = temp->id;
+            new_hp = temp->hp;
+            new_attack = temp->attack;
+            new_level = temp->level;
+
+            currentTarget->id = new_id;
+            currentTarget->hp = new_hp;
+            currentTarget->attack = new_attack;
+            currentTarget->level = new_level;
+
+            currentTarget = currentTarget->left;
+
+            currentTarget->id = cur_id;
+            currentTarget->hp = cur_hp;
+            currentTarget->attack = cur_attack;
+            currentTarget->level = cur_level;
+        }
+        */
+        /*
+        Pokemon* tmp = NULL;
+        Pokemon* current = currentTarget;
+        Pokemon* last = current->left;
+        while(current->right!=last){
+            tmp = current->right;
+            current->right = current->left;
+            current->left = tmp;
+            current = current->right;
+        }
+        currentTarget = current;
+
+        //currentTarget = currentTarget->left;
+        */
+        Pokemon* prev = currentTarget;
+        Pokemon* temp = currentTarget;
+        Pokemon* cur = currentTarget->right;
+        prev->right = prev;
+        prev->left = prev;
+        while(cur != currentTarget){
+            temp = cur->right;
+
+            cur->right = prev;
+            prev->left = cur;
+            currentTarget->right = cur;
+            cur->left = currentTarget;
+
+            prev = cur;
+            cur = temp;
+        }
+
+        currentTarget = prev;
+
+        return;
     }
 
-    currentTarget = group[count - 1];
-    for (int i = 0; i < count - 1; i++) {
-        group[i]->next = group[i + 1];
-    }
-    group[count - 1]->next = currentTarget;
 }
 
 void CircularLinkedList::showResults(){
-    if (head == nullptr) {
+    if (pokecnt == 0) {
         cout << "noPokePoke;-;\n";
         return;
     }
-
+    int tmp = pokecnt;
     Pokemon* temp = currentTarget;
-    do {
+    /*
+    while(tmp--){
         cout << "ID: " << temp->id << " HP: " << temp->hp << " LVL: " << temp->level << '\n';
-        temp = temp->next;
+        temp = temp->left;
+    }
+    */
+    do {
+        cout << "ID: " << temp->id << " HP: " << temp->hp << " LVL: " << temp->level << endl;
+        temp = temp->right;
     } while (temp != currentTarget);
+    //cout<<"pokecnt: "<<pokecnt<<endl;
 }
 
 
@@ -184,6 +658,7 @@ int main() {
             case 'D':
                 cll.deletePokemon();
                 break;
+
             case 'S':
                 cin >> shu >> int1;
                 cll.shufflePokemon(shu, int1);
@@ -196,7 +671,9 @@ int main() {
                 cin >> int1;
                 cll.reversePokemon(int1);
                 break;
+
         }
+        //cll.showResults();
     }
 
     cll.showResults(); //result
