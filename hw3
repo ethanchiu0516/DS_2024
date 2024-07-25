@@ -1,0 +1,162 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <stack>
+#include <string>
+#include <list>
+#include <map>
+#include <tuple>
+#define ll long long int
+#define Map map<int, Treenode>
+#define MIN -10e10
+
+using namespace std;
+
+struct Treenode {
+    int value;
+    int distance;
+    int parent_val;
+    vector<int> child; // The value of the children;
+    ll sum; // The sum of the max subtree when Check.
+
+    Treenode() {}
+
+    Treenode(int val, int dis, int par_val) {
+        value = val;
+        distance = dis;
+        parent_val = par_val;
+        sum = distance;
+    }
+};
+
+Map mp;
+int topNode; // The value of the topNode of Check.
+ll result; // The result of Check.
+
+// Debug
+void print_map(void) {
+    cout << "##############################" << endl;
+    for (Map::iterator itr = mp.begin(); itr != mp.end(); itr++) {
+        cout << "Key = " << itr->first;
+        cout << ", Value = " << itr->second.value;
+        cout << ", Distance = " << itr->second.distance;
+        cout << ", Parent_value = " << itr->second.parent_val << "." << endl;
+    }
+    cout << "##############################" << endl;
+    return;
+}
+
+void add_new(int val, int dis, int par_val) {
+    Treenode newNode = Treenode(val, dis, par_val);
+    mp[val] = newNode;
+    mp[par_val].child.push_back(val);
+    return;
+}
+
+void delete_node(int val) {
+    if (mp.find(val) == mp.end()) {
+        return;
+    }
+
+    for (auto itr = mp[mp[val].parent_val].child.begin(); itr != mp[mp[val].parent_val].child.end(); itr++) {
+        if (*itr == val) {
+            mp[mp[val].parent_val].child.erase(itr); // Remove val from parent.child
+            break;
+        }
+    }
+
+    for (auto itr = mp[val].child.begin(); itr != mp[val].child.end(); itr++) {
+        mp[mp[val].parent_val].child.push_back(*itr); // Add val's children to parent's children
+        mp[*itr].parent_val = mp[val].parent_val; // Change the child's parent to val's parent
+    }
+
+    mp.erase(mp.find(val));
+    return;
+}
+
+ll max_(ll first, ll second) {
+    return (first > second) ? first : second;
+}
+
+void findmaxpathsum(int root) {
+    ll max1 = 0, max2 = 0; // Largest and second largest subtree sum;
+
+    for (int child: mp[root].child) {
+        findmaxpathsum(child);
+
+        if (mp[child].sum > max1) {
+            max2 = max1;
+            max1 = mp[child].sum;
+        } else {
+            max2 = max_(max2, mp[child].sum);
+        }
+    }
+
+    // debug
+    // cout << "Root = " << root;
+    // cout << ", max1, max2 = " << max1 << ", " << max2 << "." << endl;
+
+    int currentpathsum = mp[root].distance + max1 + max2;
+    if (currentpathsum > result) {
+        result = currentpathsum;
+        topNode = root;
+    }
+
+    mp[root].sum = mp[root].distance + max1;
+    return;
+}
+
+void check(int root) {
+    topNode = -1;
+    result = MIN;
+    findmaxpathsum(root);
+    return;
+}
+
+int main(void) {
+    int root; // the value of the root
+    int n, o; // number of nodes, number of operations
+    int v, d, c; // parent's value, child's distance, child's value
+    string op;
+
+    cin >> n >> o;
+    cin >> v >> d;
+    Treenode newnode = Treenode(v, d, -1);
+    mp[v] = newnode;
+    root = v;
+
+
+    for (int i = 0; i < n; i++) {
+        cin >> v >> c >> d;
+        Treenode newnode = Treenode(c, d, v);
+        mp[c] = newnode;
+    }
+
+    Map::iterator itr = mp.begin();
+    itr++;
+    for (; itr != mp.end(); itr++) {
+        add_new(itr->second.value, itr->second.distance, itr->second.parent_val);
+    }
+    // print_map();
+
+    for (int i = 0; i < o; i++) {
+        cin >> op;
+        if (op == "Check") {
+            check(root);
+            cout << "Maximum Value: " << result << endl;
+            cout << "Root of the Path: " << topNode << endl;
+        } else if (op == "Add") {
+            cin >> v >> c >> d;
+            add_new(c, d, v);
+            // print_map();
+        } else if (op == "Delete") {
+            cin >> c;
+            delete_node(c);
+            // print_map();
+        }
+    }
+
+    check(root);
+    cout << "Final Root: " << topNode << endl;
+    return 0;
+}
